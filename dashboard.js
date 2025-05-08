@@ -52,6 +52,15 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
+    // New validation: Check if total classes equals available slots
+    const totalClasses = calculateTotalSlots(subjects);
+    const availableSlots = workingDays * workingHours;
+    
+    if (totalClasses !== availableSlots) {
+      alert(`Error: Total classes (${totalClasses}) must exactly match available slots (${availableSlots})`);
+      return;
+    }
+
     generateTimetables(subjects, numTimetables, workingDays, workingHours);
   });
 
@@ -430,4 +439,4 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
   });
-}); 
+});
