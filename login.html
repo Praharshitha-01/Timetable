@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduSlotter - Login</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="logo-container">
+      <img src="logo.png" alt="EduSlotter Logo" class="logo">
+      <h1>EDUSLOTTER</h1>
+    </div>
+    
+    <div class="login-content">
+      <h2>Welcome to EduSlotter</h2>
+      
+      <!-- Login Form -->
+      <div class="auth-card" id="login-container">
+        <h3>Login</h3>
+        <form id="login-form">
+          <div class="form-group">
+            <input type="text" id="login-username" class="form-input" placeholder="Username" required>
+          </div>
+          <div class="form-group">
+            <input type="password" id="login-password" class="form-input" placeholder="Password" required>
+          </div>
+          <button type="button" id="login-btn" class="auth-btn">Login</button>
+          <div id="login-error" class="error-message"></div>
+        </form>
+        <p class="auth-switch">Don't have an account? <a href="#" id="show-signup">Sign up</a></p>
+      </div>
+
+      <!-- Signup Form (hidden by default) -->
+      <div class="auth-card" id="signup-container" style="display:none;">
+        <h3>Sign Up</h3>
+        <form id="signup-form">
+          <div class="form-group">
+            <input type="text" id="signup-username" class="form-input" placeholder="Username" required>
+          </div>
+          <div class="form-group">
+            <input type="email" id="signup-email" class="form-input" placeholder="Email" required>
+          </div>
+          <div class="form-group">
+            <input type="password" id="signup-password" class="form-input" placeholder="Password (min 6 characters)" required>
+          </div>
+          <button type="button" id="signup-btn" class="auth-btn">Sign Up</button>
+          <div id="signup-error" class="error-message"></div>
+        </form>
+        <p class="auth-switch">Already have an account? <a href="#" id="show-login">Login</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
