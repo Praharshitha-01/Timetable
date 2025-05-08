@@ -1,442 +1,92 @@
-import { auth, onAuthStateChanged, signOut } from './firebase-config.js';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduSlotter - Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="logo.png" type="image/png">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <div class="dashboard-header">
+    <div class="header-left">
+      <img src="logo.png" alt="EduSlotter Logo" class="logo">
+      <h1>EDUSLOTTER</h1>
+    </div>
+    <div class="header-right">
+      <a href="dashboard.html" class="nav-link active">Dashboard</a>
+      <a href="admin-dashboard.html" class="nav-link" id="admin-link" style="display:none;">Admin</a>
+      <button id="logout-btn" class="logout-button">Logout</button>
+    </div>
+  </div>
 
-document.addEventListener('DOMContentLoaded', function() {
-  // DOM Elements
-  const fileInput = document.getElementById('excel-file');
-  const table = document.getElementById('data-table');
-  const form = document.getElementById('upload-form');
-  const generateBtn = document.getElementById('generate-timetable-btn');
-  const outputSection = document.getElementById('output-section');
-  const timetablesContainer = document.getElementById('timetables-container');
-  const logoutBtn = document.getElementById('logout-btn');
-  const adminLink = document.getElementById('admin-link');
+  <div class="dashboard-container">
+    <div class="dashboard-title">
+      <h2>EduSlotter</h2>
+      <p class="subtitle">Automatic Timetable Generator</p>
+    </div>
 
-  // Variables
-  let semester = '';
-  let year = '';
-  let currentTimetables = [];
-
-  // Event Listeners
-  logoutBtn.addEventListener('click', () => {
-    signOut(auth).then(() => {
-      window.location.href = 'login.html';
-    });
-  });
-
-  form.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const file = fileInput.files[0];
-    if (!file) {
-      alert('Please upload a file!');
-      return;
-    }
-    handleFile(file);
-  });
-
-  generateBtn.addEventListener('click', function() {
-    if (!validateEditedTable()) {
-      alert('Please correct table errors before generating.');
-      return;
-    }
-
-    const subjects = readTableData();
-    const numTimetables = parseInt(document.getElementById('num-timetables').value);
-    const workingDays = parseInt(document.getElementById('working-days').value);
-    const workingHours = parseInt(document.getElementById('working-hours').value);
-
-    if (!validateWorkingDays(workingDays) || !validateWorkingHours(workingHours)) {
-      return;
-    }
-
-    if (!checkSlotAvailability(subjects, workingDays, workingHours)) {
-      return;
-    }
-
-    // New validation: Check if total classes equals available slots
-    const totalClasses = calculateTotalSlots(subjects);
-    const availableSlots = workingDays * workingHours;
-    
-    if (totalClasses !== availableSlots) {
-      alert(`Error: Total classes (${totalClasses}) must exactly match available slots (${availableSlots})`);
-      return;
-    }
-
-    generateTimetables(subjects, numTimetables, workingDays, workingHours);
-  });
-
-  // File Handling
-  function handleFile(file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-      generateEditableTable(json);
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  function generateEditableTable(data) {
-    table.innerHTML = '';
-    data.forEach((row) => {
-      const tr = document.createElement('tr');
-      row.forEach((cell) => {
-        const td = document.createElement('td');
-        td.contentEditable = true;
-        td.innerText = cell;
-        tr.appendChild(td);
-      });
-      table.appendChild(tr);
-    });
-    document.getElementById('excel-preview').style.display = 'block';
-  }
-
-  // Validation Functions
-  function validateEditedTable() {
-    const rows = Array.from(table.rows);
-    if (rows.length < 3) {
-      alert('Please provide at least one subject in the table!');
-      return false;
-    }
-    return true;
-  }
-
-  function validateWorkingHours(workingHours) {
-    if (workingHours < 1 || workingHours > 9) {
-      alert('Working hours must be between 1 and 9!');
-      return false;
-    }
-    return true;
-  }
-
-  function validateWorkingDays(workingDays) {
-    if (workingDays < 1 || workingDays > 7) {
-      alert('Working days must be between 1 and 7!');
-      return false;
-    }
-    return true;
-  }
-
-  function checkSlotAvailability(subjects, workingDays, workingHours) {
-    const totalSlots = calculateTotalSlots(subjects);
-    const availableSlots = workingDays * workingHours;
-    
-    if (totalSlots > availableSlots) {
-      alert(`Error: Total classes (${totalSlots}) exceed available slots (${availableSlots})`);
-      return false;
-    }
-    return true;
-  }
-
-  function calculateTotalSlots(subjects) {
-    return subjects.reduce((total, subject) => total + subject.hours, 0);
-  }
-
-  // Data Processing
-  function readTableData() {
-    const subjects = [];
-    const rows = Array.from(table.rows);
-    
-    year = rows[0]?.cells[1]?.innerText.trim() || '';
-    semester = rows[1]?.cells[1]?.innerText.trim() || '';
-    
-    for (let i = 2; i < rows.length; i++) {
-      const cells = rows[i].cells;
-      if (cells.length >= 3) {
-        const subject = cells[0]?.innerText.trim();
-        const hours = parseInt(cells[1]?.innerText.trim());
-        const type = (cells[2]?.innerText.trim().toLowerCase() === 'lab') ? 'lab' : 'theory';
-        
-        if (subject && !isNaN(hours)) {
-          subjects.push({ name: subject, hours: hours, type: type });
-        }
-      }
-    }
-    return subjects;
-  }
-
-  // Timetable Generation
-  function generateTimetables(subjects, numTimetables, workingDays, workingHours) {
-    outputSection.style.display = 'block';
-    timetablesContainer.innerHTML = '';
-    currentTimetables = [];
-
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-      .slice(0, workingDays);
-    const timeSlots = generateTimeSlots(workingHours);
-
-    for (let t = 0; t < numTimetables; t++) {
-      const timetableData = {
-        id: `timetable-${Date.now()}-${t}`,
-        name: `${year} - Semester ${semester}`,
-        days: days,
-        timeSlots: timeSlots,
-        displaySlots: [...timeSlots],
-        subjects: JSON.parse(JSON.stringify(subjects)),
-        schedule: generateImprovedSchedule(subjects, days, timeSlots)
-      };
-
-      currentTimetables.push(timetableData);
-      renderTimetable(timetableData);
-    }
-  }
-
-  function generateTimeSlots(workingHours) {
-    const slots = [];
-    let startHour = 9;
-    
-    for (let i = 0; i < workingHours; i++) {
-      const endHour = startHour + 1;
-      slots.push(`${startHour}:00-${endHour}:00`);
-      startHour = endHour;
-    }
-    
-    return slots;
-  }
-
-  // Scheduling Algorithms
-  function generateImprovedSchedule(subjects, days, timeSlots) {
-    const schedule = {};
-    const labSubjects = subjects.filter(sub => sub.type === 'lab');
-    const theorySubjects = subjects.filter(sub => sub.type === 'theory');
-    
-    days.forEach(day => {
-      schedule[day] = {};
-      timeSlots.forEach(slot => {
-        schedule[day][slot] = null;
-      });
-    });
-
-    labSubjects.forEach(lab => {
-      let scheduledHours = 0;
-      while (scheduledHours < lab.hours) {
-        const day = days[Math.floor(Math.random() * days.length)];
-        const availableSlots = timeSlots.filter(slot => !schedule[day][slot]);
-        
-        const consecutiveSlots = findConsecutiveSlots(availableSlots, lab.hours - scheduledHours);
-        if (consecutiveSlots.length > 0) {
-          consecutiveSlots.forEach(slot => {
-            schedule[day][slot] = lab.name;
-            scheduledHours++;
-          });
-        } else if (availableSlots.length > 0) {
-          schedule[day][availableSlots[0]] = lab.name;
-          scheduledHours++;
-        }
-      }
-    });
-
-    theorySubjects.forEach(subject => {
-      let scheduledHours = 0;
-      while (scheduledHours < subject.hours) {
-        const day = days[Math.floor(Math.random() * days.length)];
-        const availableSlots = timeSlots.filter(slot => !schedule[day][slot]);
-        
-        if (availableSlots.length > 0) {
-          schedule[day][availableSlots[0]] = subject.name;
-          scheduledHours++;
-        }
-      }
-    });
-
-    return schedule;
-  }
-
-  function findConsecutiveSlots(slots, required) {
-    if (slots.length < required) return [];
-    
-    for (let i = 0; i <= slots.length - required; i++) {
-      let consecutive = true;
-      for (let j = 1; j < required; j++) {
-        const currentHour = parseInt(slots[i+j-1].split(':')[0]);
-        const nextHour = parseInt(slots[i+j].split(':')[0]);
-        if (nextHour !== currentHour + 1) {
-          consecutive = false;
-          break;
-        }
-      }
-      if (consecutive) {
-        return slots.slice(i, i + required);
-      }
-    }
-    return [];
-  }
-
-  // Rendering Functions
-  function renderTimetable(timetable) {
-    const timetableDiv = document.createElement('div');
-    timetableDiv.className = 'section-card timetable-card';
-    timetableDiv.dataset.id = timetable.id;
-
-    const headerDiv = document.createElement('div');
-    headerDiv.className = 'timetable-header';
-    
-    const heading = document.createElement('h3');
-    heading.textContent = timetable.name;
-    headerDiv.appendChild(heading);
-    
-    const editTimingsBtn = document.createElement('button');
-    editTimingsBtn.textContent = 'Edit Timings';
-    editTimingsBtn.className = 'control-btn timing-btn';
-    editTimingsBtn.addEventListener('click', () => enableTimingsEditing(timetableDiv, timetable.id));
-    headerDiv.appendChild(editTimingsBtn);
-    
-    timetableDiv.appendChild(headerDiv);
-
-    const tableEl = document.createElement('table');
-    tableEl.className = 'timetable-table';
-    
-    const headerRow = document.createElement('tr');
-    headerRow.appendChild(document.createElement('th'));
-    
-    timetable.displaySlots.forEach(slot => {
-      const th = document.createElement('th');
-      th.textContent = slot;
-      headerRow.appendChild(th);
-    });
-    
-    tableEl.appendChild(headerRow);
-
-    timetable.days.forEach(day => {
-      const row = document.createElement('tr');
-      const dayCell = document.createElement('th');
-      dayCell.textContent = day;
-      row.appendChild(dayCell);
-
-      timetable.timeSlots.forEach(slot => {
-        const td = document.createElement('td');
-        const subject = timetable.schedule[day][slot];
-        
-        if (subject) {
-          td.textContent = subject;
-          const isLab = timetable.subjects.find(s => s.name === subject)?.type === 'lab';
-          td.className = isLab ? 'lab-class' : 'theory-class';
-        } else {
-          td.textContent = '-';
-        }
-        
-        row.appendChild(td);
-      });
-
-      tableEl.appendChild(row);
-    });
-
-    timetableDiv.appendChild(tableEl);
-
-    const buttonGroup = document.createElement('div');
-    buttonGroup.className = 'button-group';
-
-    const editBtn = document.createElement('button');
-    editBtn.textContent = 'Edit Classes';
-    editBtn.className = 'control-btn';
-    editBtn.addEventListener('click', () => enableTimetableEditing(timetableDiv, timetable.id));
-    buttonGroup.appendChild(editBtn);
-
-    const downloadBtn = document.createElement('button');
-    downloadBtn.textContent = 'Download PDF';
-    downloadBtn.className = 'control-btn download-btn';
-    downloadBtn.addEventListener('click', () => downloadTimetable(timetableDiv));
-    buttonGroup.appendChild(downloadBtn);
-
-    timetableDiv.appendChild(buttonGroup);
-    timetablesContainer.appendChild(timetableDiv);
-  }
-
-  function enableTimingsEditing(timetableDiv, timetableId) {
-    const timetable = currentTimetables.find(t => t.id === timetableId);
-    if (!timetable) return;
-
-    const headerRow = timetableDiv.querySelector('tr');
-    const timeCells = Array.from(headerRow.querySelectorAll('th')).slice(1);
-    
-    timeCells.forEach((th, index) => {
-        th.contentEditable = true;
-        th.classList.add('editing-timing');
-    });
-
-    const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'Save Timings';
-    saveBtn.className = 'control-btn save-timing-btn';
-    saveBtn.addEventListener('click', () => {
-        timeCells.forEach((th, index) => {
-            timetable.displaySlots[index] = th.textContent;
-            th.contentEditable = false;
-            th.classList.remove('editing-timing');
-        });
-        
-        saveBtn.remove();
-        alert('Timings updated successfully!');
-    });
-
-    timetableDiv.querySelector('.timetable-header').appendChild(saveBtn);
-  }
-
-  function enableTimetableEditing(timetableDiv, timetableId) {
-    const timetable = currentTimetables.find(t => t.id === timetableId);
-    if (!timetable) return;
-
-    const cells = timetableDiv.querySelectorAll('td');
-    cells.forEach(cell => {
-      if (cell.textContent !== '-') {
-        cell.contentEditable = true;
-        cell.classList.add('editing-class');
-      }
-    });
-
-    const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'Save Classes';
-    saveBtn.className = 'control-btn save-class-btn';
-    saveBtn.addEventListener('click', () => {
-      cells.forEach(cell => {
-        if (cell.textContent !== '-') {
-          cell.contentEditable = false;
-          cell.classList.remove('editing-class');
+    <div class="upload-section">
+      <div class="form-card">
+        <h3>Upload Excel Data</h3>
+        <form id="upload-form">
+          <div class="form-group">
+            <label for="excel-file">Select Excel File:</label>
+            <div class="file-input-container">
+              <input type="file" id="excel-file" accept=".xlsx, .xls" required>
+              <span id="file-name">No file chosen</span>
+            </div>
+          </div>
           
-          const day = cell.parentElement.firstChild.textContent;
-          const slotIndex = cell.cellIndex - 1;
-          const timeSlot = timetable.timeSlots[slotIndex];
-          timetable.schedule[day][timeSlot] = cell.textContent;
-        }
-      });
-      
-      saveBtn.remove();
-      alert('Class assignments updated successfully!');
+          <div class="input-row">
+            <div class="input-group">
+              <label for="num-timetables">Number of Timetables</label>
+              <input type="number" id="num-timetables" min="1" required>
+            </div>
+            <div class="input-group">
+              <label for="working-days">Working Days</label>
+              <input type="number" id="working-days" min="1" max="7" required>
+            </div>
+          </div>
+          
+          <div class="input-group">
+            <label for="working-hours">Working Hours per Day</label>
+            <input type="number" id="working-hours" min="1" max="9" required>
+          </div>
+          
+          <div class="button-container">
+            <button type="submit" class="primary-btn">Upload and Generate</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="table-card" id="excel-preview" style="display:none;">
+      <h3>Editable Excel Data</h3>
+      <div class="table-container">
+        <table id="data-table"></table>
+      </div>
+      <div class="button-container">
+        <button id="generate-timetable-btn" class="primary-btn">Generate Timetables</button>
+      </div>
+    </div>
+
+    <div id="output-section" class="output-container" style="display:none;">
+      <h3>Generated Timetables</h3>
+      <div id="timetables-container"></div>
+    </div>
+  </div>
+
+  <script type="module" src="dashboard.js"></script>
+  <script>
+    // Display selected file name
+    document.getElementById('excel-file').addEventListener('change', function(e) {
+      const fileName = e.target.files[0] ? e.target.files[0].name : 'No file chosen';
+      document.getElementById('file-name').textContent = fileName;
     });
-
-    timetableDiv.querySelector('.button-group').appendChild(saveBtn);
-  }
-
-  function downloadTimetable(element) {
-    const buttons = element.querySelectorAll('button');
-    buttons.forEach(btn => btn.style.display = 'none');
-
-    html2canvas(element).then(canvas => {
-      const pdf = new jspdf.jsPDF();
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 10, 180, 0);
-      pdf.save(`${element.querySelector('h3').textContent}.pdf`);
-      
-      buttons.forEach(btn => btn.style.display = 'inline-block');
-    });
-  }
-
-  // Authentication
-  onAuthStateChanged(auth, (user) => {
-    if (!user) {
-      window.location.href = 'login.html';
-    } else {
-      const adminEmails = [
-        "23h51a0593@cmrcet.ac.in",
-        "23h51a0519@cmrcet.ac.in", 
-        "23h51a05cx@cmrcet.ac.in",
-        "23h51a05j8@cmrcet.ac.in",
-        "23h51a05w1@cmrcet.ac.in",
-        "23h51a05y3@cmrcet.ac.in"
-      ];
-      
-      if (adminLink && adminEmails.includes(user.email)) {
-        adminLink.style.display = 'block';
-      }
-    }
-  });
-});
+  </script>
+</body>
+</html>
