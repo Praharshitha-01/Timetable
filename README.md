@@ -1,2 +1,2 @@
-# Timetable
-app
+# Eduslotter
+SlotGenius
