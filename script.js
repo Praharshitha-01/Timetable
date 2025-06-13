@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const signupBtn = document.getElementById('signup-btn');
   const showSignup = document.getElementById('show-signup');
   const showLogin = document.getElementById('show-login');
+  const loginForm = document.getElementById('login-form');
+  const signupForm = document.getElementById('signup-form');
 
   // Admin emails
   const adminEmails = [
@@ -51,31 +53,19 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Login function
-  loginBtn.addEventListener('click', async function() {
-    const username = document.getElementById('login-username').value.trim();
+  loginForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const email = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value.trim();
     
-    if (!username || !password) {
+    if (!email || !password) {
       loginError.textContent = "Please fill in all fields";
       return;
     }
 
     try {
-      // Find user by username to get email
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("username", "==", username));
-      const querySnapshot = await getDocs(q);
-      
-      if (querySnapshot.empty) {
-        loginError.textContent = "Invalid username or password";
-        return;
-      }
-
-      const userDoc = querySnapshot.docs[0];
-      const userData = userDoc.data();
-      
       // Login with email and password
-      await signInWithEmailAndPassword(auth, userData.email, password);
+      await signInWithEmailAndPassword(auth, email, password);
       
       // Verify user document exists
       const userDocRef = doc(db, "users", auth.currentUser.uid);
@@ -92,12 +82,15 @@ document.addEventListener('DOMContentLoaded', function() {
       console.error("Login error:", error);
       loginError.textContent = error.code === 'auth/wrong-password' 
         ? "Invalid password" 
-        : "Invalid username or password";
+        : error.code === 'auth/user-not-found'
+        ? "User not found"
+        : "Login failed. Please try again.";
     }
   });
 
   // Signup function
-  signupBtn.addEventListener('click', async function() {
+  signupForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
     const username = document.getElementById('signup-username').value.trim();
     const email = document.getElementById('signup-email').value.trim();
     const password = document.getElementById('signup-password').value.trim();
@@ -151,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
       signupError.textContent = '';
       signupContainer.style.display = 'none';
       loginContainer.style.display = 'block';
-      document.getElementById('signup-form').reset();
+      signupForm.reset();
       alert('Registration successful! Please login.');
       
     } catch (error) {
