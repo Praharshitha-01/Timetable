@@ -10,7 +10,7 @@
 <body>
   <div class="login-wrapper">
     <div class="logo-container">
-      <img src="LOGO.png" alt="EduSlotter Logo" class="logo">
+      <img src="logo.png" alt="EduSlotter Logo" class="logo">
       <h1>EDUSLOTTER</h1>
     </div>
     
@@ -22,12 +22,12 @@
         <h3>Login</h3>
         <form id="login-form">
           <div class="form-group">
-            <input type="text" id="login-username" class="form-input" placeholder="Username" required>
+            <input type="email" id="login-username" class="form-input" placeholder="Email" required>
           </div>
           <div class="form-group">
             <input type="password" id="login-password" class="form-input" placeholder="Password" required>
           </div>
-          <button type="button" id="login-btn" class="auth-btn">Login</button>
+          <button type="submit" id="login-btn" class="auth-btn">Login</button>
           <div id="login-error" class="error-message"></div>
         </form>
         <p class="auth-switch">Don't have an account? <a href="#" id="show-signup">Sign up</a></p>
@@ -46,7 +46,7 @@
           <div class="form-group">
             <input type="password" id="signup-password" class="form-input" placeholder="Password (min 6 characters)" required>
           </div>
-          <button type="button" id="signup-btn" class="auth-btn">Sign Up</button>
+          <button type="submit" id="signup-btn" class="auth-btn">Sign Up</button>
           <div id="signup-error" class="error-message"></div>
         </form>
         <p class="auth-switch">Already have an account? <a href="#" id="show-login">Login</a></p>
